@@ -1,4 +1,4 @@
-module viger-pro/go-cache
+module github.com/viger-pro/go-cache
 
 require github.com/viger-pro/go-collections v0.3.0
 
