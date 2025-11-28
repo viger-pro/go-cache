@@ -7,7 +7,7 @@ import (
 )
 
 type testCase struct {
-	name string
+	name  string
 	cache Cache[int, int]
 }
 
@@ -111,12 +111,12 @@ func largeTest(testName string, cache Cache[int, int], n int) {
 
 func BenchmarkCachePut(b *testing.B) {
 	var n uint = 1000_000
-	var testCases = createTestCases(n, 1 * time.Second)
+	var testCases = createTestCases(n, 1*time.Second)
 	for _, testCase := range testCases {
 		b.Run(testCase.name, func(b *testing.B) {
 			var cache = testCase.cache
 			for i := 0; i < b.N; i++ {
-				cache.Put(i, i * 2)
+				cache.Put(i, i*2)
 			}
 		})
 	}
@@ -124,7 +124,7 @@ func BenchmarkCachePut(b *testing.B) {
 
 func BenchmarkCacheGet(b *testing.B) {
 	var n uint = 1000_000
-	var testCases = createTestCases(n, 1 * time.Second)
+	var testCases = createTestCases(n, 1*time.Minute)
 	for _, testCase := range testCases {
 		b.Run(testCase.name, func(b *testing.B) {
 			cache := testCase.cache

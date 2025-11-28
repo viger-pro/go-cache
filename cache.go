@@ -14,19 +14,19 @@ type Cache[K comparable, V any] interface {
 	Close()
 }
 
-type Weighter[T any] interface {
+type WeightCalculator[T any] interface {
 	WeightOf(t T) uint
 }
 
-type CountElementsWeigher[T any] struct{}
+type CountElementsWeightCalculator[T any] struct{}
 
-func (c *CountElementsWeigher[T]) WeightOf(_ T) uint {
+func (c *CountElementsWeightCalculator[T]) WeightOf(_ T) uint {
 	return 1
 }
 
-type ZeroWeighter[T any] struct{}
+type ZeroWeightCalculator[T any] struct{}
 
-func (c *ZeroWeighter[T]) WeightOf(_ T) uint {
+func (c *ZeroWeightCalculator[T]) WeightOf(_ T) uint {
 	return 0
 }
 

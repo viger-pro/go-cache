@@ -19,8 +19,8 @@ type QueueCache[K comparable, V any] struct {
 
 	expireAfterWrite int64
 	maxWeight        uint
-	keyWeigher       Weighter[K]
-	valueWeigher     Weighter[V]
+	keyWeigher       WeightCalculator[K]
+	valueWeigher     WeightCalculator[V]
 }
 
 type queueEntry[K comparable, V any] struct {
@@ -37,12 +37,12 @@ func NewQueueCache[K comparable, V any](maxEntries uint, expireAfterWrite time.D
 		id:               lastCacheId,
 		lock:             &sync.RWMutex{},
 		cache:            make(map[K]*queueEntry[K, V], maxEntries+1),
-		queue:            collections.NewArrayQueue[*queueEntry[K, V]](),
+		queue:            collections.NewArrayQueueWithInitialCapacity[*queueEntry[K, V]](maxEntries),
 		weight:           0,
 		expireAfterWrite: expireAfterWrite.Milliseconds(),
 		maxWeight:        maxEntries,
-		keyWeigher:       &CountElementsWeigher[K]{},
-		valueWeigher:     &ZeroWeighter[V]{},
+		keyWeigher:       &CountElementsWeightCalculator[K]{},
+		valueWeigher:     &ZeroWeightCalculator[V]{},
 	}
 	cacheCleanups[lastCacheId] = cache.removeExpiredWithLock
 	startCachesCleanup()
@@ -58,8 +58,8 @@ func (c *QueueCache[K, V]) Put(key K, value V) {
 	}
 
 	e = &queueEntry[K, V]{
-		key:   key,
-		value: value,
+		key:       key,
+		value:     value,
 		expiresAt: time.Now().UnixMilli() + c.expireAfterWrite,
 	}
 	c.cache[key] = e
@@ -141,6 +141,3 @@ func (c *QueueCache[K, V]) remove(e *queueEntry[K, V]) {
 		delete(c.cache, e.key)
 	}
 }
-
-
-

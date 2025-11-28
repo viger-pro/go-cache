@@ -16,10 +16,10 @@ type LinkedListCache[K comparable, V any] struct {
 
 	weight uint
 
-	expireAfterWrite int64
-	maxWeight        uint
-	keyWeigher       Weighter[K]
-	valueWeigher     Weighter[V]
+	expireAfterWrite      int64
+	maxWeight             uint
+	keyWeightCalculator   WeightCalculator[K]
+	valueWeightCalculator WeightCalculator[V]
 }
 
 type linkedEntry[K any, V any] struct {
@@ -35,20 +35,48 @@ func NewLinkedListCache[K comparable, V any](
 	maxEntries uint,
 	expireAfterWrite time.Duration) *LinkedListCache[K, V] {
 
+	return newLinkedListCacheWithMaxWeight(
+		maxEntries,
+		maxEntries,
+		expireAfterWrite,
+		&CountElementsWeightCalculator[K]{},
+		&ZeroWeightCalculator[V]{})
+}
+
+func NewLinkedListCacheWithMaxWeight[K comparable, V any](
+	maxWeight uint,
+	expireAfterWrite time.Duration,
+	keyWeightCalculator WeightCalculator[K],
+	valueWeightCalculator WeightCalculator[V]) *LinkedListCache[K, V] {
+	return newLinkedListCacheWithMaxWeight[K, V](
+		16,
+		maxWeight,
+		expireAfterWrite,
+		keyWeightCalculator,
+		valueWeightCalculator)
+}
+
+func newLinkedListCacheWithMaxWeight[K comparable, V any](
+	initialCapacity uint,
+	maxWeight uint,
+	expireAfterWrite time.Duration,
+	keyWeightCalculator WeightCalculator[K],
+	valueWeightCalculator WeightCalculator[V]) *LinkedListCache[K, V] {
+
 	lock.Lock()
 	defer lock.Unlock()
 	lastCacheId++
 	cache := &LinkedListCache[K, V]{
-		id:               lastCacheId,
-		lock:             &sync.RWMutex{},
-		cache:            make(map[K]*linkedEntry[K, V], maxEntries+1),
-		head:             nil,
-		tail:             nil,
-		weight:           0,
-		expireAfterWrite: expireAfterWrite.Milliseconds(),
-		maxWeight:        maxEntries,
-		keyWeigher:       &CountElementsWeigher[K]{},
-		valueWeigher:     &ZeroWeighter[V]{},
+		id:                    lastCacheId,
+		lock:                  &sync.RWMutex{},
+		cache:                 make(map[K]*linkedEntry[K, V], initialCapacity+1),
+		head:                  nil,
+		tail:                  nil,
+		weight:                0,
+		expireAfterWrite:      expireAfterWrite.Milliseconds(),
+		maxWeight:             maxWeight,
+		keyWeightCalculator:   keyWeightCalculator,
+		valueWeightCalculator: valueWeightCalculator,
 	}
 	cacheCleanups[lastCacheId] = cache.removeExpiredWithLock
 	startCachesCleanup()
@@ -79,7 +107,7 @@ func (c *LinkedListCache[K, V]) Put(key K, value V) {
 		c.head = e
 	}
 
-	c.weight += c.keyWeigher.WeightOf(key) + c.valueWeigher.WeightOf(value)
+	c.weight += c.keyWeightCalculator.WeightOf(key) + c.valueWeightCalculator.WeightOf(value)
 	for c.weight > c.maxWeight {
 		c.removeEldest()
 	}
@@ -149,8 +177,8 @@ func (c *LinkedListCache[K, V]) removeExpired() bool {
 }
 
 func (c *LinkedListCache[K, V]) remove(e *linkedEntry[K, V]) {
-	c.weight -= c.keyWeigher.WeightOf(e.key)
-	c.weight -= c.valueWeigher.WeightOf(e.value)
+	c.weight -= c.keyWeightCalculator.WeightOf(e.key)
+	c.weight -= c.valueWeightCalculator.WeightOf(e.value)
 	c.unlink(e)
 	delete(c.cache, e.key)
 }
