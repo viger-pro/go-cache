@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"log"
 	"sync"
 	"time"
 )
@@ -109,7 +110,11 @@ func (c *LinkedListCache[K, V]) Put(key K, value V) {
 
 	c.weight += c.keyWeightCalculator.WeightOf(key) + c.valueWeightCalculator.WeightOf(value)
 	for c.weight > c.maxWeight {
-		c.removeEldest()
+		if !c.removeEldest() {
+			log.Printf("could not remove eldest entry, weight: %d, max: %d, head: %v, tail: %v\n",
+				c.weight, c.maxWeight, c.head, c.tail)
+			break
+		}
 	}
 }
 
@@ -153,10 +158,12 @@ func (c *LinkedListCache[K, V]) Close() {
 	c.cache = nil
 }
 
-func (c *LinkedListCache[K, V]) removeEldest() {
+func (c *LinkedListCache[K, V]) removeEldest() bool {
 	if c.head != nil {
 		c.remove(c.head)
+		return true
 	}
+	return false
 }
 
 func (c *LinkedListCache[K, V]) removeExpiredWithLock() {

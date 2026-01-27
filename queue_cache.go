@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -67,7 +68,11 @@ func (c *QueueCache[K, V]) Put(key K, value V) {
 
 	c.weight += c.keyWeigher.WeightOf(key) + c.valueWeigher.WeightOf(value)
 	for c.weight > c.maxWeight {
-		c.removeEldest()
+		if !c.removeEldest() {
+			log.Printf("could not remove eldest entry, weight: %d, max: %d, queue size: %d\n",
+				c.weight, c.maxWeight, c.queue.Size())
+			break
+		}
 	}
 }
 
@@ -110,11 +115,13 @@ func (c *QueueCache[K, V]) Close() {
 	c.lock.Unlock()
 }
 
-func (c *QueueCache[K, V]) removeEldest() {
+func (c *QueueCache[K, V]) removeEldest() bool {
 	e, err := c.queue.RemoveFirst()
 	if err == nil {
 		c.remove(e)
+		return true
 	}
+	return false
 }
 
 func (c *QueueCache[K, V]) removeExpiredWithLock() {
