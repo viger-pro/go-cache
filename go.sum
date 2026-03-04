@@ -1,4 +1,4 @@
-github.com/viger-pro/go-collections v0.3.0 h1:GNFV7iv5oghCEiKL5svJpu46VqzKwUXEMBVgcsBXU5M=
-github.com/viger-pro/go-collections v0.3.0/go.mod h1:IFfCBLKybUYnL2KV3Hc0jt7NfCpLW0C7E4PNkkcOx4c=
-golang.org/x/sync v0.18.0 h1:kr88TuHDroi+UVf+0hZnirlk8o8T+4MrK6mr60WkH/I=
-golang.org/x/sync v0.18.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=
+github.com/viger-pro/go-collections v0.4.0 h1:HAuIkOr+ZmW+O0nrVDffz1PvHQDmTyAQDHsfdWvYLO8=
+github.com/viger-pro/go-collections v0.4.0/go.mod h1:IFfCBLKybUYnL2KV3Hc0jt7NfCpLW0C7E4PNkkcOx4c=
+golang.org/x/sync v0.19.0 h1:vV+1eWNmZ5geRlYjzm2adRgW2/mcpevXNg50YZtPCE4=
+golang.org/x/sync v0.19.0/go.mod h1:9KTHXmSnoGruLpwFjVSX0lNNA75CykiMECbovNTZqGI=

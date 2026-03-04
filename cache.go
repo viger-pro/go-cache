@@ -15,18 +15,18 @@ type Cache[K comparable, V any] interface {
 }
 
 type WeightCalculator[T any] interface {
-	WeightOf(t T) uint
+	WeightOf(t T) uint64
 }
 
 type CountElementsWeightCalculator[T any] struct{}
 
-func (c *CountElementsWeightCalculator[T]) WeightOf(_ T) uint {
+func (c *CountElementsWeightCalculator[T]) WeightOf(_ T) uint64 {
 	return 1
 }
 
 type ZeroWeightCalculator[T any] struct{}
 
-func (c *ZeroWeightCalculator[T]) WeightOf(_ T) uint {
+func (c *ZeroWeightCalculator[T]) WeightOf(_ T) uint64 {
 	return 0
 }
 

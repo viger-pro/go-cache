@@ -16,18 +16,20 @@ type QueueCache[K comparable, V any] struct {
 	cache map[K]*queueEntry[K, V]
 	queue collections.Queue[*queueEntry[K, V]]
 
-	weight uint
+	weight uint64
 
 	expireAfterWrite int64
-	maxWeight        uint
+	maxWeight        uint64
 	keyWeigher       WeightCalculator[K]
 	valueWeigher     WeightCalculator[V]
 }
 
 type queueEntry[K comparable, V any] struct {
-	key       K
-	value     V
-	expiresAt int64
+	key         K
+	keyWeight   uint64
+	value       V
+	valueWeight uint64
+	expiresAt   int64
 }
 
 func NewQueueCache[K comparable, V any](maxEntries uint, expireAfterWrite time.Duration) *QueueCache[K, V] {
@@ -41,7 +43,7 @@ func NewQueueCache[K comparable, V any](maxEntries uint, expireAfterWrite time.D
 		queue:            collections.NewArrayQueueWithInitialCapacity[*queueEntry[K, V]](maxEntries),
 		weight:           0,
 		expireAfterWrite: expireAfterWrite.Milliseconds(),
-		maxWeight:        maxEntries,
+		maxWeight:        uint64(maxEntries),
 		keyWeigher:       &CountElementsWeightCalculator[K]{},
 		valueWeigher:     &ZeroWeightCalculator[V]{},
 	}
@@ -59,17 +61,20 @@ func (c *QueueCache[K, V]) Put(key K, value V) {
 	}
 
 	e = &queueEntry[K, V]{
-		key:       key,
-		value:     value,
+		key:         key,
+		keyWeight:   c.keyWeigher.WeightOf(key),
+		value:       value,
+		valueWeight: c.valueWeigher.WeightOf(value),
+
 		expiresAt: time.Now().UnixMilli() + c.expireAfterWrite,
 	}
 	c.cache[key] = e
 	c.queue.AddLast(e)
 
-	c.weight += c.keyWeigher.WeightOf(key) + c.valueWeigher.WeightOf(value)
+	c.weight += e.keyWeight + e.valueWeight
 	for c.weight > c.maxWeight {
 		if !c.removeEldest() {
-			log.Printf("could not remove eldest entry, weight: %d, max: %d, queue size: %d\n",
+			log.Printf("QueueCache: could not remove eldest entry, weight: %d, max: %d, queue size: %d\n",
 				c.weight, c.maxWeight, c.queue.Size())
 			break
 		}
@@ -141,10 +146,7 @@ func (c *QueueCache[K, V]) removeExpired() bool {
 }
 
 func (c *QueueCache[K, V]) remove(e *queueEntry[K, V]) {
-	if e.expiresAt >= 0 {
-		c.weight -= c.keyWeigher.WeightOf(e.key)
-		c.weight -= c.valueWeigher.WeightOf(e.value)
-		e.expiresAt = -1
-		delete(c.cache, e.key)
-	}
+	c.weight -= e.keyWeight
+	c.weight -= e.valueWeight
+	delete(c.cache, e.key)
 }

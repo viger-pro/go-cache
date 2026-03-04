@@ -87,7 +87,7 @@ func TestCache(t *testing.T) {
 	}
 }
 
-func TestLargeTestLinkedCache(t *testing.T) {
+func TestLargeCache(t *testing.T) {
 	linkedCache := NewLinkedListCache[int, int](10_000, time.Minute)
 	queueCache := NewQueueCache[int, int](10_000, time.Minute)
 	n := 10_000_000
