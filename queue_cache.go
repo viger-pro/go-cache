@@ -25,11 +25,10 @@ type QueueCache[K comparable, V any] struct {
 }
 
 type queueEntry[K comparable, V any] struct {
-	key         K
-	keyWeight   uint64
-	value       V
-	valueWeight uint64
-	expiresAt   int64
+	key       K
+	value     V
+	weight    uint64
+	expiresAt int64
 }
 
 func NewQueueCache[K comparable, V any](maxEntries uint, expireAfterWrite time.Duration) *QueueCache[K, V] {
@@ -61,17 +60,16 @@ func (c *QueueCache[K, V]) Put(key K, value V) {
 	}
 
 	e = &queueEntry[K, V]{
-		key:         key,
-		keyWeight:   c.keyWeigher.WeightOf(key),
-		value:       value,
-		valueWeight: c.valueWeigher.WeightOf(value),
+		key:    key,
+		value:  value,
+		weight: c.keyWeigher.WeightOf(key) + c.valueWeigher.WeightOf(value),
 
 		expiresAt: time.Now().UnixMilli() + c.expireAfterWrite,
 	}
 	c.cache[key] = e
 	c.queue.AddLast(e)
 
-	c.weight += e.keyWeight + e.valueWeight
+	c.weight += e.weight
 	for c.weight > c.maxWeight {
 		if !c.removeEldest() {
 			log.Printf("QueueCache: could not remove eldest entry, weight: %d, max: %d, queue size: %d\n",
@@ -146,7 +144,6 @@ func (c *QueueCache[K, V]) removeExpired() bool {
 }
 
 func (c *QueueCache[K, V]) remove(e *queueEntry[K, V]) {
-	c.weight -= e.keyWeight
-	c.weight -= e.valueWeight
+	c.weight -= e.weight
 	delete(c.cache, e.key)
 }

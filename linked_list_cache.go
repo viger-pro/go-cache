@@ -24,11 +24,10 @@ type LinkedListCache[K comparable, V any] struct {
 }
 
 type linkedEntry[K any, V any] struct {
-	key         K
-	keyWeight   uint64
-	value       V
-	valueWeight uint64
-	expiresAt   int64
+	key       K
+	value     V
+	weight    uint64
+	expiresAt int64
 
 	prev *linkedEntry[K, V]
 	next *linkedEntry[K, V]
@@ -95,12 +94,11 @@ func (c *LinkedListCache[K, V]) Put(key K, value V) {
 	}
 
 	e = &linkedEntry[K, V]{
-		key:         key,
-		keyWeight:   c.keyWeightCalculator.WeightOf(key),
-		value:       value,
-		valueWeight: c.valueWeightCalculator.WeightOf(value),
-		expiresAt:   time.Now().UnixMilli() + c.expireAfterWrite,
-		prev:        c.tail,
+		key:       key,
+		value:     value,
+		weight:    c.keyWeightCalculator.WeightOf(key) + c.valueWeightCalculator.WeightOf(value),
+		expiresAt: time.Now().UnixMilli() + c.expireAfterWrite,
+		prev:      c.tail,
 	}
 	c.cache[key] = e
 
@@ -112,7 +110,7 @@ func (c *LinkedListCache[K, V]) Put(key K, value V) {
 		c.head = e
 	}
 
-	c.weight += e.keyWeight + e.valueWeight
+	c.weight += e.weight
 	for c.weight > c.maxWeight {
 		if !c.removeEldest() {
 			log.Printf("LinkedCache: could not remove eldest entry, weight: %d, max: %d, head: %v, tail: %v\n",
@@ -188,8 +186,7 @@ func (c *LinkedListCache[K, V]) removeExpired() bool {
 }
 
 func (c *LinkedListCache[K, V]) remove(e *linkedEntry[K, V]) {
-	c.weight -= e.keyWeight
-	c.weight -= e.valueWeight
+	c.weight -= e.weight
 	c.unlink(e)
 	delete(c.cache, e.key)
 }
